@@ -8,6 +8,7 @@ type Manager struct {
 	mux sync.RWMutex
 
 	conns map[*Client]bool
+	Event chan Event
 }
 
 func NewManager() *Manager {
