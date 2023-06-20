@@ -38,7 +38,6 @@ func (s *Server) Listen() {
 		err := s.Echo.Shutdown(ctx)
 		if err != nil {
 			s.Logger.Fatal(err)
-			return
 		}
 	}()
 

@@ -1,43 +1,71 @@
 package ws
 
 import (
+	"context"
 	"github.com/labstack/echo/v4"
-	"golang.org/x/net/websocket"
+	"io"
+	"net/http"
+	"nhooyr.io/websocket"
 	"pwebsocket/ws"
+	"time"
 )
 
-type HelloWsHandler struct {
+type WSHandler struct {
 }
 
-func NewHelloWsHandler() *HelloWsHandler {
-	return &HelloWsHandler{}
+func NewWsHandler() *WSHandler {
+	return &WSHandler{}
 }
 
 var (
 	wsManager = ws.NewManager()
 )
 
-func (h *HelloWsHandler) Hello(c echo.Context) error {
-	websocket.Handler(func(conn *websocket.Conn) {
-		wsManager.AcceptConn(conn)
-		defer func() {
-			conn.Close()
-		}()
-		for {
-			err := websocket.Message.Send(conn, "hello")
-			if err != nil {
-				c.Logger().Error(err)
-				return
-			}
-
-			msg := ""
-			err = websocket.Message.Receive(conn, &msg)
-			if err != nil {
-				c.Logger().Error(err)
-				return
-			}
-			c.Logger().Info("websocket hello", msg)
+func (h *WSHandler) Hello(c echo.Context) error {
+	http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: false, OriginPatterns: []string{"*"}})
+		if err != nil {
+			c.Logger().Error(err)
+			return
 		}
-	}).ServeHTTP(c.Response(), c.Request())
+
+		client := &ws.Client{Conn: conn}
+		wsManager.AcceptConn(client)
+		client.Heartbeat(wsManager)
+
+		for {
+			err = echoHandler(client.Conn)
+			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
+				return
+			}
+			if err != nil {
+				c.Logger().Error(err)
+				return
+			}
+		}
+
+	})(c.Response(), c.Request())
 	return nil
+}
+
+func echoHandler(conn *websocket.Conn) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+	defer cancel()
+
+	typ, r, err := conn.Reader(ctx)
+	if err != nil {
+		return err
+	}
+
+	w, err := conn.Writer(ctx, typ)
+	if err != nil {
+		return err
+	}
+
+	_, err = io.Copy(w, r)
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	return err
 }
