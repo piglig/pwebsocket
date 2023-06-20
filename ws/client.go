@@ -9,6 +9,7 @@ import (
 
 type Client struct {
 	*websocket.Conn
+	UserID uint64
 	RoomID string
 }
 
