@@ -26,7 +26,7 @@ func (h *WSHandler) Hello(c echo.Context) error {
 		client := &Client{Conn: conn}
 		h.manager.AcceptConn(client)
 		client.Heartbeat(h.manager)
-
+		go client.Do(h.manager.Event)
 		for {
 			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 				return
