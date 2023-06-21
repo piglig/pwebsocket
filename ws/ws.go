@@ -1,25 +1,19 @@
 package ws
 
 import (
-	"context"
 	"github.com/labstack/echo/v4"
-	"io"
+	"log"
 	"net/http"
 	"nhooyr.io/websocket"
-	"pwebsocket/ws"
-	"time"
 )
 
 type WSHandler struct {
+	manager *Manager
 }
 
 func NewWsHandler() *WSHandler {
-	return &WSHandler{}
+	return &WSHandler{manager: NewManager()}
 }
-
-var (
-	wsManager = ws.NewManager()
-)
 
 func (h *WSHandler) Hello(c echo.Context) error {
 	http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -29,12 +23,11 @@ func (h *WSHandler) Hello(c echo.Context) error {
 			return
 		}
 
-		client := &ws.Client{Conn: conn}
-		wsManager.AcceptConn(client)
-		client.Heartbeat(wsManager)
+		client := &Client{Conn: conn}
+		h.manager.AcceptConn(client)
+		client.Heartbeat(h.manager)
 
 		for {
-			err = echoHandler(client.Conn)
 			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 				return
 			}
@@ -48,24 +41,7 @@ func (h *WSHandler) Hello(c echo.Context) error {
 	return nil
 }
 
-func echoHandler(conn *websocket.Conn) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
-	defer cancel()
-
-	typ, r, err := conn.Reader(ctx)
-	if err != nil {
-		return err
-	}
-
-	w, err := conn.Writer(ctx, typ)
-	if err != nil {
-		return err
-	}
-
-	_, err = io.Copy(w, r)
-	if err != nil {
-		return err
-	}
-	err = w.Close()
-	return err
+func (h *WSHandler) Start() {
+	log.Println("start ws manager")
+	h.manager.Do()
 }

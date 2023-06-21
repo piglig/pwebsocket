@@ -2,7 +2,9 @@ package ws
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"log"
 	"nhooyr.io/websocket"
 	"time"
 )
@@ -31,4 +33,24 @@ func (c *Client) Heartbeat(manager *Manager) {
 			}
 		}
 	}()
+}
+
+func (c *Client) Do(event chan Event) {
+	for {
+		typ, r, err := c.Read(context.Background())
+		if err != nil {
+			log.Println(err)
+			return
+		}
+
+		log.Printf("client received type:[%s] msg:[%s]\n", typ, string(r))
+		var e Event
+		err = json.Unmarshal(r, &e)
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+
+		event <- e
+	}
 }
