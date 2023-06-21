@@ -3,6 +3,7 @@ package ws
 import (
 	"github.com/labstack/echo/v4"
 	"log"
+	"math/rand"
 	"net/http"
 	"nhooyr.io/websocket"
 )
@@ -23,20 +24,11 @@ func (h *WSHandler) Hello(c echo.Context) error {
 			return
 		}
 
-		client := &Client{Conn: conn}
+		client := &Client{Conn: conn, UserID: rand.Uint64()}
+		log.Println("accept new client", client)
 		h.manager.AcceptConn(client)
 		client.Heartbeat(h.manager)
 		go client.Do(h.manager.Event)
-		for {
-			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
-				return
-			}
-			if err != nil {
-				c.Logger().Error(err)
-				return
-			}
-		}
-
 	})(c.Response(), c.Request())
 	return nil
 }

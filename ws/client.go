@@ -25,7 +25,7 @@ func (c *Client) Heartbeat(manager *Manager) {
 				ctx, _ := context.WithTimeout(context.Background(), 8*time.Second)
 				err := c.Ping(ctx)
 				if err != nil {
-					fmt.Println("remove the client", c, time.Now())
+					fmt.Println("remove the client", c, time.Now(), err)
 					c.Close(websocket.StatusAbnormalClosure, "heartbeat fail")
 					manager.RemoveConn(c)
 					return
@@ -50,7 +50,7 @@ func (c *Client) Do(event chan Event) {
 			log.Println(err)
 			continue
 		}
-
+		e.Client = c
 		event <- e
 	}
 }

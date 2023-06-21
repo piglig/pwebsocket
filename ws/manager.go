@@ -1,8 +1,10 @@
 package ws
 
 import (
-	"fmt"
+	"context"
+	"encoding/json"
 	"github.com/labstack/gommon/log"
+	"nhooyr.io/websocket"
 	"sync"
 )
 
@@ -27,7 +29,7 @@ func NewManager() *Manager {
 }
 
 func (s *Manager) initEvents() {
-	s.RegisterEvent(SingleChatEvent, nil)
+	s.RegisterEvent(SingleChatEvent, s.singleChatEvent)
 	s.RegisterEvent(GroupChatEvent, nil)
 	s.RegisterEvent(BroadChatEvent, nil)
 }
@@ -70,10 +72,38 @@ func (s *Manager) GetClients() map[*Client]bool {
 }
 
 func (s *Manager) Do() {
+	defer func() {
+		if err := recover(); err != nil {
+			log.Info(err)
+		}
+	}()
+
 	for {
 		select {
 		case event := <-s.Event:
-			fmt.Println(event)
+			handler, ok := s.handlers[event.Type]
+			if !ok {
+				log.Infof("manager received invalid event type[%s]", event.Type)
+				continue
+			}
+			handler(event.Type, event.Client, event.Data)
 		}
 	}
+}
+
+func (s *Manager) singleChatEvent(eventType EventType, client *Client, message json.RawMessage) {
+	d := struct {
+		UserID uint64
+		Msg    string
+	}{}
+
+	err := json.Unmarshal(message, &d)
+	if err != nil {
+		client.Write(context.Background(), websocket.MessageText, []byte(err.Error()))
+		return
+	}
+
+	client.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
+
+	log.Info(eventType, client, d)
 }

@@ -1,5 +1,7 @@
 package ws
 
+import "encoding/json"
+
 type EventType string
 
 const (
@@ -9,10 +11,12 @@ const (
 )
 
 type Event struct {
-	Type EventType
+	Type    EventType
+	*Client `json:"-"`
+	Data    json.RawMessage
 }
 
-type EventHandler func(eventType EventType, client *Client)
+type EventHandler func(eventType EventType, client *Client, rawMsg json.RawMessage)
 
 func isValidEventType(eventType EventType) bool {
 	switch eventType {
