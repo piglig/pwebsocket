@@ -30,7 +30,9 @@ func NewManager() *Manager {
 
 func (s *Manager) initEvents() {
 	s.RegisterEvent(SingleChatEvent, s.singleChatEvent)
+	s.RegisterEvent(ChangeRoomEvent, s.changeRoomEvent)
 	s.RegisterEvent(GroupChatEvent, nil)
+
 	s.RegisterEvent(BroadChatEvent, nil)
 }
 
@@ -117,4 +119,40 @@ func (s *Manager) singleChatEvent(eventType EventType, client *Client, message j
 
 func (s *Manager) groupChatEvent(eventType EventType, client *Client, message json.RawMessage) {
 	// TODO group chat
+	d := struct {
+		UserID uint64
+		Msg    string
+	}{}
+
+	err := json.Unmarshal(message, &d)
+	if err != nil {
+		client.Write(context.Background(), websocket.MessageText, []byte(err.Error()))
+		return
+	}
+
+	for c := range s.conns {
+		if c.UserID == d.UserID {
+			err = c.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
+			if err != nil {
+				log.Printf("singleChatEvent write err %v", err)
+				continue
+			}
+			log.Info("singleChatEvent send msg", d.Msg)
+		}
+	}
+}
+
+func (s *Manager) changeRoomEvent(eventType EventType, client *Client, message json.RawMessage) {
+	d := struct {
+		RoomID uint64
+	}{}
+
+	err := json.Unmarshal(message, &d)
+	if err != nil {
+		client.Write(context.Background(), websocket.MessageText, []byte(err.Error()))
+		return
+	}
+
+	client.RoomID = d.RoomID
+	log.Infof("client %p user_id %d room_id %d", client, client.UserID, client.RoomID)
 }

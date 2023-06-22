@@ -12,7 +12,7 @@ import (
 type Client struct {
 	*websocket.Conn
 	UserID uint64
-	RoomID string
+	RoomID uint64
 }
 
 func (c *Client) Heartbeat(manager *Manager) {
