@@ -114,3 +114,7 @@ func (s *Manager) singleChatEvent(eventType EventType, client *Client, message j
 		}
 	}
 }
+
+func (s *Manager) groupChatEvent(eventType EventType, client *Client, message json.RawMessage) {
+	// TODO group chat
+}
