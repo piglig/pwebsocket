@@ -103,7 +103,14 @@ func (s *Manager) singleChatEvent(eventType EventType, client *Client, message j
 		return
 	}
 
-	client.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
-
-	log.Info(eventType, client, d)
+	for c := range s.conns {
+		if c.UserID == d.UserID {
+			err = c.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
+			if err != nil {
+				log.Printf("singleChatEvent write err %v", err)
+				continue
+			}
+			log.Info("singleChatEvent send msg", d.Msg)
+		}
+	}
 }
