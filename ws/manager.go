@@ -31,7 +31,7 @@ func NewManager() *Manager {
 func (s *Manager) initEvents() {
 	s.RegisterEvent(SingleChatEvent, s.singleChatEvent)
 	s.RegisterEvent(ChangeRoomEvent, s.changeRoomEvent)
-	s.RegisterEvent(GroupChatEvent, nil)
+	s.RegisterEvent(GroupChatEvent, s.groupChatEvent)
 
 	s.RegisterEvent(BroadChatEvent, nil)
 }
@@ -118,9 +118,8 @@ func (s *Manager) singleChatEvent(eventType EventType, client *Client, message j
 }
 
 func (s *Manager) groupChatEvent(eventType EventType, client *Client, message json.RawMessage) {
-	// TODO group chat
 	d := struct {
-		UserID uint64
+		RoomID uint64
 		Msg    string
 	}{}
 
@@ -131,15 +130,16 @@ func (s *Manager) groupChatEvent(eventType EventType, client *Client, message js
 	}
 
 	for c := range s.conns {
-		if c.UserID == d.UserID {
+		if c.RoomID == d.RoomID {
 			err = c.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
 			if err != nil {
-				log.Printf("singleChatEvent write err %v", err)
+				log.Printf("groupChatEvent write err %v", err)
 				continue
 			}
-			log.Info("singleChatEvent send msg", d.Msg)
 		}
 	}
+
+	log.Infof("groupChatEvent room_id %d send msg %s", d.RoomID, d.Msg)
 }
 
 func (s *Manager) changeRoomEvent(eventType EventType, client *Client, message json.RawMessage) {
