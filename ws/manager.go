@@ -33,7 +33,7 @@ func (s *Manager) initEvents() {
 	s.RegisterEvent(ChangeRoomEvent, s.changeRoomEvent)
 	s.RegisterEvent(GroupChatEvent, s.groupChatEvent)
 
-	s.RegisterEvent(BroadChatEvent, nil)
+	s.RegisterEvent(BroadChatEvent, s.broadcastChatEvent)
 }
 
 func (s *Manager) RegisterEvent(eventType EventType, handler EventHandler) {
@@ -155,4 +155,26 @@ func (s *Manager) changeRoomEvent(eventType EventType, client *Client, message j
 
 	client.RoomID = d.RoomID
 	log.Infof("client %p user_id %d room_id %d", client, client.UserID, client.RoomID)
+}
+
+func (s *Manager) broadcastChatEvent(eventType EventType, client *Client, message json.RawMessage) {
+	d := struct {
+		Msg string
+	}{}
+
+	err := json.Unmarshal(message, &d)
+	if err != nil {
+		client.Write(context.Background(), websocket.MessageText, []byte(err.Error()))
+		return
+	}
+
+	for c := range s.conns {
+		err = c.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
+		if err != nil {
+			log.Printf("broadcastChatEvent write err %v", err)
+			continue
+		}
+	}
+
+	log.Infof("broadcastChatEvent send msg %s", d.Msg)
 }

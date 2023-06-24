@@ -18,11 +18,15 @@ func NewWsHandler() *WSHandler {
 
 func (h *WSHandler) Hello(c echo.Context) error {
 	http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: false, OriginPatterns: []string{"*"}})
+		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+			InsecureSkipVerify: false, OriginPatterns: []string{"*"},
+		})
 		if err != nil {
 			c.Logger().Error(err)
 			return
 		}
+
+		conn.SetReadLimit(1024)
 
 		client := &Client{Conn: conn, UserID: rand.Uint64()}
 		log.Println("accept new client", client)
