@@ -144,6 +144,12 @@ func (s *Manager) groupChatEvent(client *Client, message json.RawMessage, filter
 					continue
 				}
 			}
+		} else {
+			err = c.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
+			if err != nil {
+				log.Printf("groupChatEvent write err %v", err)
+				continue
+			}
 		}
 	}
 
@@ -186,6 +192,12 @@ func (s *Manager) broadcastChatEvent(client *Client, message json.RawMessage, fi
 					log.Printf("broadcastChatEvent write err %v", err)
 					continue
 				}
+			}
+		} else {
+			err = c.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
+			if err != nil {
+				log.Printf("broadcastChatEvent write err %v", err)
+				continue
 			}
 		}
 	}
