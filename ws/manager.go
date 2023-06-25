@@ -88,12 +88,12 @@ func (s *Manager) Do() {
 				log.Infof("manager received invalid event type[%s]", event.Type)
 				continue
 			}
-			handler(event.Type, event.Client, event.Data)
+			handler(event.Client, event.Data, event.filter)
 		}
 	}
 }
 
-func (s *Manager) singleChatEvent(eventType EventType, client *Client, message json.RawMessage) {
+func (s *Manager) singleChatEvent(client *Client, message json.RawMessage, filter FilterFunc) {
 	d := struct {
 		UserID uint64
 		Msg    string
@@ -117,7 +117,7 @@ func (s *Manager) singleChatEvent(eventType EventType, client *Client, message j
 	}
 }
 
-func (s *Manager) groupChatEvent(eventType EventType, client *Client, message json.RawMessage) {
+func (s *Manager) groupChatEvent(client *Client, message json.RawMessage, filter FilterFunc) {
 	d := struct {
 		RoomID uint64
 		Msg    string
@@ -130,11 +130,19 @@ func (s *Manager) groupChatEvent(eventType EventType, client *Client, message js
 	}
 
 	for c := range s.conns {
-		if c.RoomID == d.RoomID {
-			err = c.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
-			if err != nil {
-				log.Printf("groupChatEvent write err %v", err)
+		if c.RoomID != d.RoomID {
+			continue
+		}
+
+		if filter != nil {
+			if filter(c) {
 				continue
+			} else {
+				err = c.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
+				if err != nil {
+					log.Printf("groupChatEvent write err %v", err)
+					continue
+				}
 			}
 		}
 	}
@@ -142,7 +150,7 @@ func (s *Manager) groupChatEvent(eventType EventType, client *Client, message js
 	log.Infof("groupChatEvent room_id %d send msg %s", d.RoomID, d.Msg)
 }
 
-func (s *Manager) changeRoomEvent(eventType EventType, client *Client, message json.RawMessage) {
+func (s *Manager) changeRoomEvent(client *Client, message json.RawMessage, filter FilterFunc) {
 	d := struct {
 		RoomID uint64
 	}{}
@@ -157,7 +165,7 @@ func (s *Manager) changeRoomEvent(eventType EventType, client *Client, message j
 	log.Infof("client %p user_id %d room_id %d", client, client.UserID, client.RoomID)
 }
 
-func (s *Manager) broadcastChatEvent(eventType EventType, client *Client, message json.RawMessage) {
+func (s *Manager) broadcastChatEvent(client *Client, message json.RawMessage, filter FilterFunc) {
 	d := struct {
 		Msg string
 	}{}
@@ -169,10 +177,16 @@ func (s *Manager) broadcastChatEvent(eventType EventType, client *Client, messag
 	}
 
 	for c := range s.conns {
-		err = c.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
-		if err != nil {
-			log.Printf("broadcastChatEvent write err %v", err)
-			continue
+		if filter != nil {
+			if filter(c) {
+				continue
+			} else {
+				err = c.Write(context.Background(), websocket.MessageText, []byte(d.Msg))
+				if err != nil {
+					log.Printf("broadcastChatEvent write err %v", err)
+					continue
+				}
+			}
 		}
 	}
 

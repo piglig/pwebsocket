@@ -15,9 +15,11 @@ type Event struct {
 	Type    EventType
 	*Client `json:"-"`
 	Data    json.RawMessage
+	filter  func(c *Client) bool
 }
 
-type EventHandler func(eventType EventType, client *Client, rawMsg json.RawMessage)
+type FilterFunc func(client *Client) bool
+type EventHandler func(client *Client, rawMsg json.RawMessage, filter FilterFunc)
 
 func isValidEventType(eventType EventType) bool {
 	switch eventType {
