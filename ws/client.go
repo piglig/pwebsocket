@@ -3,7 +3,6 @@ package ws
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"nhooyr.io/websocket"
 	"time"
@@ -25,7 +24,7 @@ func (c *Client) Heartbeat(manager *Manager) {
 				ctx, _ := context.WithTimeout(context.Background(), 8*time.Second)
 				err := c.Ping(ctx)
 				if err != nil {
-					fmt.Println("remove the client", c, time.Now(), err)
+					log.Println("remove the client", c, time.Now(), err)
 					c.Close(websocket.StatusAbnormalClosure, "heartbeat fail")
 					manager.RemoveConn(c)
 					return

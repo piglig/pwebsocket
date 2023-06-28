@@ -1,7 +1,6 @@
 package ws
 
 import (
-	"github.com/labstack/echo/v4"
 	"log"
 	"math/rand"
 	"net/http"
@@ -16,28 +15,24 @@ func NewWsHandler() *WSHandler {
 	return &WSHandler{manager: NewManager()}
 }
 
-func (h *WSHandler) Hello(c echo.Context) error {
-	http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
-			InsecureSkipVerify: false, OriginPatterns: []string{"*"},
-		})
-		if err != nil {
-			c.Logger().Error(err)
-			return
-		}
-
-		conn.SetReadLimit(1024)
-
-		client := &Client{Conn: conn, UserID: rand.Uint64()}
-		log.Println("accept new client", client)
-		h.manager.AcceptConn(client)
-		client.Heartbeat(h.manager)
-		go client.Do(h.manager.Event)
-	})(c.Response(), c.Request())
-	return nil
+func (h *WSHandler) GetManager() *Manager {
+	return h.manager
 }
 
-func (h *WSHandler) Start() {
-	log.Println("start ws manager")
-	h.manager.Do()
+func (h *WSHandler) Upgrade(w http.ResponseWriter, r *http.Request) {
+	conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{
+		InsecureSkipVerify: false, OriginPatterns: []string{"*"},
+	})
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	conn.SetReadLimit(1024)
+
+	client := &Client{Conn: conn, UserID: rand.Uint64()}
+	log.Println("accept new client", client)
+	h.manager.AcceptConn(client)
+	client.Heartbeat(h.manager)
+	go client.Do(h.manager.Event)
 }

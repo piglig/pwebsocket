@@ -1,12 +1,17 @@
 package route
 
 import (
-	"github.com/labstack/echo/v4"
+	"net/http"
 	"pwebsocket/ws"
 )
 
-func InitWs(e *echo.Echo) {
-	helloHandler := ws.NewWsHandler()
-	go helloHandler.Start()
-	e.GET("ws", helloHandler.Hello)
+func InitWs() *http.ServeMux {
+	handler := ws.NewWsHandler()
+	manager := handler.GetManager()
+	go manager.Start()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("ws", handler.Upgrade)
+
+	return mux
 }

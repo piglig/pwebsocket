@@ -73,7 +73,8 @@ func (s *Manager) GetClients() map[*Client]bool {
 	return clientCopy
 }
 
-func (s *Manager) Do() {
+func (s *Manager) Start() {
+	log.Info("start ws manager")
 	defer func() {
 		if err := recover(); err != nil {
 			log.Info(err)
