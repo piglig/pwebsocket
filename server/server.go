@@ -26,7 +26,7 @@ func New(addr string) *Server {
 func (s *Server) Listen() {
 	s.Echo.Logger.SetLevel(log.DEBUG)
 
-	route.InitRoute(s.Echo)
+	route.InitWs(s.Echo)
 
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, os.Interrupt, syscall.SIGTERM)
